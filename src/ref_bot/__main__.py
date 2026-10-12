@@ -3,7 +3,7 @@ import os
 import sys
 
 from .bot import Bot
-from .client import Client, run
+from .client import Client, check_token, run
 from .config import ConfigError, load_config
 
 
@@ -26,9 +26,13 @@ def main(argv=None):
     except ValueError as e:
         print(e, file=sys.stderr)
         return 2
-    print("Bot started. Press Ctrl+C to stop.")
+    ok, who = check_token(client)
+    if not ok:
+        print(f"Telegram rejected the token or is unreachable: {who}", file=sys.stderr)
+        return 2
+    print(f"Connected as {who}. Open THIS bot in Telegram and send /start. Press Ctrl+C to stop.")
     try:
-        run(client, Bot(cfg))
+        run(client, Bot(cfg), log=lambda t: print(t, file=sys.stderr))
     except KeyboardInterrupt:
         print("Stopped.")
     return 0

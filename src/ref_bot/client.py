@@ -28,17 +28,29 @@ class Client:
         return body
 
 
-def run(client, bot, stop=lambda: False, sleep=time.sleep, max_loops=None):
+def check_token(client):
+    """getMe: (True, '@username') or (False, reason). Lets the owner see WHICH bot the token belongs to before polling starts."""
+    res = client.call("getMe")
+    if res.get("ok") and isinstance(res.get("result"), dict):
+        u = res["result"]
+        return True, "@" + str(u.get("username", "?")) + (" (" + str(u["first_name"]) + ")" if u.get("first_name") else "")
+    return False, str(res.get("error", "Telegram rejected the request"))
+
+
+def run(client, bot, stop=lambda: False, sleep=time.sleep, max_loops=None, log=lambda text: None):
     """Long-polling loop. Network errors back off (1..30 s); failed sends never stop the loop; message text is never logged."""
-    offset, delay, loops = None, 1, 0
+    offset, delay, loops, last_error = None, 1, 0, None
     while not stop() and (max_loops is None or loops < max_loops):
         loops += 1
         res = client.call("getUpdates", {"offset": offset, "timeout": 30, "allowed_updates": ["message", "callback_query"]})
         if not res.get("ok"):
+            if res.get("error") != last_error:                # report a new kind of error once, never the message texts or the token
+                log("Telegram error: " + str(res.get("error", "unknown")))
+                last_error = res.get("error")
             sleep(delay)
             delay = min(delay * 2, 30)
             continue
-        delay = 1
+        delay, last_error = 1, None
         for upd in res.get("result", []):
             offset = upd.get("update_id", 0) + 1
             for method, payload in bot.handle_update(upd):

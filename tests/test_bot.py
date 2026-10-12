@@ -5,7 +5,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from ref_bot import Bot, ConfigError, match_faq, validate_config  # noqa: E402
-from ref_bot.client import Client, run  # noqa: E402
+from ref_bot.client import Client, check_token, run  # noqa: E402
 
 HERE = os.path.dirname(__file__)
 RAW = json.load(open(os.path.join(HERE, "..", "examples", "config.example.json"), encoding="utf-8"))
@@ -139,6 +139,24 @@ class FakeClient:
         if method == "getUpdates":
             return self.responses.pop(0) if self.responses else {"ok": True, "result": []}
         return {"ok": True}
+
+
+class Startup(unittest.TestCase):
+    def test_check_token_names_the_bot_or_explains(self):
+        class C:
+            def __init__(self, r):
+                self.r = r
+
+            def call(self, method, payload=None):
+                return self.r
+        self.assertEqual(check_token(C({"ok": True, "result": {"username": "shop_bot", "first_name": "Shop"}})), (True, "@shop_bot (Shop)"))
+        self.assertEqual(check_token(C({"ok": False, "error": "HTTP 401"})), (False, "HTTP 401"))
+
+    def test_errors_are_logged_once_per_kind_without_secrets(self):
+        client = FakeClient([{"ok": False, "error": "HTTP 401"}] * 3 + [{"ok": True, "result": []}, {"ok": False, "error": "URLError"}])
+        logs = []
+        run(client, Bot(cfg()), sleep=lambda s: None, max_loops=5, log=logs.append)
+        self.assertEqual(logs, ["Telegram error: HTTP 401", "Telegram error: URLError"])
 
 
 class Loop(unittest.TestCase):
