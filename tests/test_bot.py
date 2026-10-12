@@ -213,7 +213,10 @@ class HttpClient(unittest.TestCase):
             srv.shutdown()
             srv.server_close()
         dead = Client("123:fake", base="http://127.0.0.1:9", timeout=1)
-        self.assertFalse(dead.call("getUpdates")["ok"])
+        res = dead.call("getUpdates")
+        self.assertFalse(res["ok"])
+        self.assertNotIn("123:fake", res["error"])               # the token never appears in error text
+        self.assertTrue(res["error"].startswith("URLError"))
 
 
 if __name__ == "__main__":

@@ -1,9 +1,19 @@
 import json
+import os
+import ssl
 import time
 import urllib.error
 import urllib.request
 
 API = "https://api.telegram.org"
+
+
+def _context():
+    """TLS context WITH certificate checking. Python from python.org on macOS ships without CA certificates, so use the system bundle."""
+    for cafile in ("/etc/ssl/cert.pem", "/private/etc/ssl/cert.pem"):
+        if os.path.exists(cafile):
+            return ssl.create_default_context(cafile=cafile)
+    return ssl.create_default_context()
 
 
 class Client:
@@ -12,19 +22,22 @@ class Client:
     def __init__(self, token, base=API, timeout=40):
         if not token or ":" not in token:
             raise ValueError("a Telegram bot token is required (environment variable TELEGRAM_BOT_TOKEN)")
+        self._token = token
         self._url = f"{base}/bot{token}/"
         self.timeout = timeout
+        self._ctx = _context()
 
     def call(self, method, payload=None):
         data = json.dumps(payload or {}).encode("utf-8")
         req = urllib.request.Request(self._url + method, data=data, headers={"Content-Type": "application/json"})
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as r:
+            with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as r:
                 body = json.loads(r.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             return {"ok": False, "error": f"HTTP {e.code}"}
         except Exception as e:  # noqa: BLE001 - network problems must not crash the loop
-            return {"ok": False, "error": type(e).__name__}
+            why = str(getattr(e, "reason", "") or "")[:100].replace(self._token, "***")
+            return {"ok": False, "error": type(e).__name__ + (f": {why}" if why else "")}
         return body
 
 
