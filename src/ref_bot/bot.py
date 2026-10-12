@@ -91,6 +91,8 @@ class Bot:
         if text.split()[0].split("@")[0] in ("/start", "/menu", "/help"):
             self.awaiting.discard(chat_id)
             return [self._msg(chat_id, f"{self.cfg['greeting']}", self.main_menu())]
+        if text.split()[0].split("@")[0] == "/id":
+            return [self._msg(chat_id, f"Ваш chat id: {chat_id}")]   # to put into owner_chat_id; shown only to the user themselves
         if chat_id in self.awaiting:
             return self._forward(chat_id, sender, text)
         i = match_faq(text, self.cfg["faq"])

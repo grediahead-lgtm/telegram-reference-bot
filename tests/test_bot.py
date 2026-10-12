@@ -92,6 +92,10 @@ class Flows(unittest.TestCase):
         again = bot.handle_update(msg("ще раз", chat=5))
         self.assertTrue(all(c[1]["chat_id"] == 5 for c in again))   # no second forward without pressing the button
 
+    def test_id_command_shows_only_the_users_own_chat_id(self):
+        (m, p), = Bot(cfg()).handle_update(msg("/id", chat=777))
+        self.assertEqual((p["chat_id"], p["text"]), (777, "Ваш chat id: 777"))
+
     def test_groups_bots_and_non_text_are_handled_safely(self):
         bot = Bot(cfg())
         self.assertEqual(bot.handle_update(msg("/start", ctype="group")), [])

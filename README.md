@@ -17,6 +17,8 @@ A small Telegram bot for a small business: answers frequent questions, shows a p
 PYTHONPATH=src python3 -m ref_bot --config config.json --check
 TELEGRAM_BOT_TOKEN=123456:your-token PYTHONPATH=src python3 -m ref_bot --config config.json
 ```
+Local test with your own bot: `bash scripts/run_local.sh` (asks for the token, hidden). Send `/id` to the bot to see your chat id for `owner_chat_id`.
+
 Tests (no internet, fake token): `python3 -m unittest discover -s tests`.
 
 ## Config fields
